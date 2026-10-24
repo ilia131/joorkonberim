@@ -12,11 +12,39 @@ services:
     environment:
       PYTHONDONTWRITEBYTECODE: "1"
       PYTHONUNBUFFERED: "1"
+      DB_ENGINE: postgresql
+      DB_NAME: ${DB_NAME:-joorkonberim}
+      DB_USER: ${DB_USER:-joorkonberim}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      DB_HOST: db
+      DB_PORT: "5432"
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
-      - ./db.sqlite3:/app/db.sqlite3
       - ./media:/app/media
     expose:
       - "8000"
+    networks:
+      - joorkonberim
+
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-joorkonberim}
+      POSTGRES_USER: ${DB_USER:-joorkonberim}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - joorkonberim
 
@@ -35,6 +63,9 @@ services:
       - backend
     networks:
       - joorkonberim
+
+volumes:
+  postgres_data:
 
 networks:
   joorkonberim:
